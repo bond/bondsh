@@ -15,12 +15,11 @@ void chain_init(bsh_command_chain_t *cc) {
 void chain_free(bsh_command_chain_t *cc) {
 //	printf("freeing command: %s\n", cc->command);
 	int i;
-	if(cc->command != NULL) free(&(cc->command));
-	if(cc->next != NULL) free(&(cc->next));
+	if(cc->command != NULL) free(cc->command);
+	if(cc->next != NULL) free(cc->next);
 	for(i = 0; cc->args[i] != NULL; i++) {
 		free(cc->args[i]);
 	}
-	//free(cc);
 }
 void chain_set_command(bsh_command_chain_t *cc, char *command) {
 	cc->command = strdup(command);

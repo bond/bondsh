@@ -37,25 +37,24 @@ int main (int argc, char const *argv[], char const *envp[])
 	
 	/* code */
 	char line[LINE_BUFFER_MAX];
-	
-	int i;
-	bsh_command_chain_t chain;
+	bsh_history_chain_t hist;
+	history_init(&hist);
 	
 	for(;;) {
 		bzero(line, sizeof(line));
-		
+		bsh_command_chain_t chain;
 		chain_init(&chain);
 		
 		print_prompt();
 		
 		switch(determine_input_context(&chain)) {
 			case CONTEXT_EXECUTE:
-			//	execute_binary(voidp_input, (char**)argv, (char**)envp);
+				execute_binary(chain.command, (char **)&(chain.args), (char **)envp);
+				fflush(stdout);
 
 				break;
 			case CONTEXT_NOCONTEXT:
-				execute_binary(chain.command, (char **)&(chain.args), (char **)envp);
-				fflush(stdout);
+				printf("NOCONTEXT caught\n");
 				break;
 				
 			default:
@@ -63,7 +62,8 @@ int main (int argc, char const *argv[], char const *envp[])
 				exit(-1);
 				break;
 		}
-		chain_free(chain);
+		//chain_free(&chain);
+		history_attach(&hist, &chain);
 	}
 	
 	return 0;

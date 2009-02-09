@@ -12,7 +12,7 @@ int determine_input_context(bsh_command_chain_t *chain) {
 
 	int c,i; // c=char,i=index of char
 	char *p = NULL;
-	int pipe_seen = 0; //number of pipes in this line
+	int pipes = 0; //number of pipes in this line
 	
 	char input_buf[LINE_BUFFER_MAX];
 	bzero(&input_buf, sizeof(input_buf));
@@ -21,10 +21,10 @@ int determine_input_context(bsh_command_chain_t *chain) {
 	for(i = 0; (c = getchar()) && (i - 1) < LINE_BUFFER_MAX;) {
 		if( feof(stdin) != 0 ) { exit(0); /* EOF */ }
 		
-		switch(chain_get_state(chain, &input_buf, c)) {
+		switch(chain_get_state(chain, (char *)&input_buf, c)) {
 			case CHAIN_WANT_COMMAND:
 				p = (char *)&(input_buf[i]);
-				chain_set_command(chain, &input_buf);
+				chain_set_command(chain, (char *)&input_buf);
 
 				break;
 			case CHAIN_WANT_ARGUMENT:
@@ -33,7 +33,7 @@ int determine_input_context(bsh_command_chain_t *chain) {
 				break;
 				
 			case CHAIN_WANT_LAST_COMMAND:
-				chain_set_command(chain, &input_buf);
+				chain_set_command(chain, (char *)&input_buf);
 				goto CHAIN_END;
 
 			case CHAIN_WANT_LAST_ARGUMENT:
@@ -41,7 +41,9 @@ int determine_input_context(bsh_command_chain_t *chain) {
 				goto CHAIN_END;
 				
 			case CHAIN_WANT_PROCESS_PIPE:
-				errx(-1, "Not implemented");
+				//errx(-1, "Not implemented");
+				pipes++;
+				printf("got a pipe in '%s': %c - skipped\n", input_buf, c);
 				break;
 				
 			case CHAIN_BUFFER_SKIP:
@@ -62,14 +64,9 @@ int determine_input_context(bsh_command_chain_t *chain) {
 	return CONTEXT_NOCONTEXT;
 	
 CHAIN_END:
-
 	/* Determine stuff */
-//	printf("command '%s', which is %d chars\n", cc.command, i);
-//	printf("arguments: ");
-//	for(x = 0; cc.args[x] != NULL; x++) printf("'%s' ", cc.args[x]);
 //	printf("\n");
 	
 	/* set context data and return */
-	return CONTEXT_NOCONTEXT;
 	return CONTEXT_EXECUTE;
 }
