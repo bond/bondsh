@@ -44,7 +44,7 @@ typedef struct {
 	void chain_set_argument(bsh_command_chain_t*, char*);
 	void chain_set_command(bsh_command_chain_t*, char*);
 	int determine_input_context(bsh_command_chain_t*);
-	void chain_init(bsh_command_chain_t*);
+	bsh_command_chain_t *chain_init();
 	void chain_free(bsh_command_chain_t*);
 	void print_prompt();
 	

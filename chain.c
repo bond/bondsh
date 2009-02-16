@@ -4,13 +4,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-void chain_init(bsh_command_chain_t *cc) {
-	cc->command = NULL;
+bsh_command_chain_t *chain_init() {
+	bsh_command_chain_t *cc = malloc(sizeof(bsh_command_chain_t));
+	assert(cc);
+ 	cc->command = NULL;	
 	bzero(cc->args, sizeof(cc->args));
 	cc->num_args = 0;
 	cc->next = NULL;
-	cc->args[cc->num_args++] = strdup(PROGRAM_NAME);
-	assert(cc->args[0] && cc->num_args);
+ 	cc->args[cc->num_args++] = strdup(PROGRAM_NAME);	
+ 	assert(cc->args[0] && cc->num_args);
+	return cc;
 }
 void chain_free(bsh_command_chain_t *cc) {
 	int i;

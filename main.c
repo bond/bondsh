@@ -67,16 +67,15 @@ int main (int argc, char const *argv[], char *envp[])
 
 	for(;;) {
 		bzero(line, sizeof(line));
-		bsh_command_chain_t chain;
-		chain_init(&chain);
+		bsh_command_chain_t *chain = chain_init();
 		
 		print_prompt();
 		
-		switch(determine_input_context(&chain)) {
+		switch(determine_input_context(chain)) {
 			case CONTEXT_EXECUTE:
-				execute_chain(&chain, (char **)envp, path);
+				execute_chain(chain, (char **)envp, path);
 				fflush(stdout);
-
+		
 				break;
 			case CONTEXT_NOCONTEXT:
 				printf("NOCONTEXT caught\n");
@@ -87,8 +86,8 @@ int main (int argc, char const *argv[], char *envp[])
 				exit(-1);
 				break;
 		}
-		//chain_free(&chain);
-		history_attach(&hist, &chain);
+		chain_free(chain);
+		// history_attach(&hist, &chain);
 	}
 	
 	return 0;
