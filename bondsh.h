@@ -20,6 +20,7 @@ typedef void (*sighandler_t)(int);
 #define CHAIN_WANT_COMPLETION		0x0010
 
 #define CHAR_TAB					 9
+#define CHAR_SLASH					 47
 #define CHAR_NEWLINE				10
 #define	CHAR_SPACE					32
 #define CHAR_PIPE					124

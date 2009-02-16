@@ -6,6 +6,8 @@
 #include <assert.h>
 #include "bondsh.h"
 #include <errno.h>
+#include <limits.h>
+#include <err.h>
 #include <editline/readline.h>
 
 
@@ -13,15 +15,20 @@ void sighandle_line_clear(int sig) {
 	fflush(stdout);
 }
 
-void execute_binary(const bsh_command_chain_t *chain, char *envp[]) {
+void execute_binary(bsh_command_chain_t *chain, char *envp[], const char *path) {
 	int i;
 	pid_t pid;
 	pid = fork();
 	if(pid == 0) {
-		i = execve(chain->command, chain->args, envp);	
+		i = execvP(chain->command, path, chain->args);
 		if(i < 0){
-			printf("failed to execve(""%s"", argv, envp),errno is %d\n", chain->command, errno);
-			exit(0);
+			switch(errno) {
+				case ENOENT:
+					/* attach path */
+					errx(errno, "File does not exist: '%s'", chain->command);
+				default:
+					errx(errno, "Failed to execve(""%s"", argv, envp), errno is %d", chain->command, errno);
+			}
 		} else {
 			print_prompt();
 		}
@@ -30,8 +37,10 @@ void execute_binary(const bsh_command_chain_t *chain, char *envp[]) {
 	}	
 }
 
-void execute_chain(const bsh_command_chain_t *chain, char *envp[]) {
-	execute_binary(chain, envp);
+void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
+	for(;chain != NULL; chain = chain->next) {
+		execute_binary(chain, envp, path);
+	}
 }
 
 int main (int argc, char const *argv[], char *envp[])
@@ -65,7 +74,7 @@ int main (int argc, char const *argv[], char *envp[])
 		
 		switch(determine_input_context(&chain)) {
 			case CONTEXT_EXECUTE:
-				execute_chain(&chain, (char **)envp);
+				execute_chain(&chain, (char **)envp, path);
 				fflush(stdout);
 
 				break;
