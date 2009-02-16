@@ -12,11 +12,6 @@ void sighandle_line_clear(int sig) {
 	fflush(stdout);
 }
 
-void check_path(const bsh_command_chain_t *chain, const char *path) {
-	int i;
-	printf("%c", path+1);
-	for(i = 0; (int *)envp+i != NULL; i++) printf("%d - %c\n", i, *envp+i);
-}
 void execute_chain(const bsh_command_chain_t *chain, char *envp[]) {
 	int i;
 	pid_t pid;
@@ -64,7 +59,6 @@ int main (int argc, char const *argv[], char const *envp[])
 		
 		switch(determine_input_context(&chain)) {
 			case CONTEXT_EXECUTE:
-				check_path(&chain, path);
 				execute_chain(&chain, (char **)envp);
 				fflush(stdout);
 
