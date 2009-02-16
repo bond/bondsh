@@ -23,21 +23,26 @@ int determine_input_context(bsh_command_chain_t *chain) {
 
 		switch(chain_get_state(chain, (char *)&input_buf, c)) {
 			case CHAIN_WANT_COMMAND:
+//				printf("want command '%s'\n", input_buf);
 				p = (char *)&(input_buf[i]);
 				chain_set_command(chain, (char *)&input_buf);
-
 				break;
 			case CHAIN_WANT_ARGUMENT:
+//				printf("want argument '%s'\n", p);
 				chain_set_argument(chain, p);
 				p = (char *)&(input_buf[i]);				
 				break;
 				
 			case CHAIN_WANT_LAST_COMMAND:
+//				printf("want last command\n");
 				chain_set_command(chain, (char *)&input_buf);
 				goto CHAIN_END;
 
 			case CHAIN_WANT_LAST_ARGUMENT:
-				chain_set_argument(chain, p);
+//				printf("want last argument '%s'\n", p);
+				if(strlen(p) > 0) {
+					chain_set_argument(chain, p);
+				}
 				goto CHAIN_END;
 				
 			case CHAIN_WANT_PROCESS_PIPE:

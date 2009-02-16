@@ -25,7 +25,9 @@ void chain_free(bsh_command_chain_t *cc) {
 }
 void chain_set_command(bsh_command_chain_t *cc, char *command) {
 	cc->command = strdup(command);
+	cc->args[0] = strdup(command);
 	assert(cc->command);
+	assert(cc->args[0]);
 }
 void chain_set_argument(bsh_command_chain_t *cc, char *argument) {
 	cc->args[cc->num_args] = strdup(argument);
