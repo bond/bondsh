@@ -47,6 +47,7 @@ int chain_get_state(bsh_command_chain_t *cc, char *buf, char c) {
 		case CHAR_TAB:
 			return CHAIN_WANT_COMPLETION;
 		case CHAR_PIPE:
+			if(strlen(buf) == 0) { print_prompt(); return CHAIN_BUFFER_SKIP; }
 			return CHAIN_WANT_PROCESS_PIPE;
 		default:
 			return CONTEXT_NOCONTEXT;			

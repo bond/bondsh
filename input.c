@@ -12,7 +12,7 @@ int determine_input_context(bsh_command_chain_t *chain) {
 
 	int c,i; // c=char,i=index of char
 	char *p = NULL;
-	int pipes = 0; //number of pipes in this line
+//	int pipes = 0; //number of pipes in this line
 	
 	char input_buf[LINE_BUFFER_MAX];
 	bzero(&input_buf, sizeof(input_buf));
@@ -41,9 +41,10 @@ int determine_input_context(bsh_command_chain_t *chain) {
 				goto CHAIN_END;
 				
 			case CHAIN_WANT_PROCESS_PIPE:
-				//errx(-1, "Not implemented");
-				pipes++;
-				printf("got a pipe in '%s': %c - skipped\n", input_buf, c);
+				if(chain->command == NULL) { chain_set_command(chain, (char *)&input_buf); }
+				else { chain_set_argument(chain, p); }
+
+				return CHAIN_WANT_PROCESS_PIPE;
 				break;
 				
 			case CHAIN_BUFFER_SKIP:

@@ -28,11 +28,12 @@ typedef void (*sighandler_t)(int);
 // COMMAND-CHAIN DATATYPES
 
 
-typedef struct {
+typedef struct _bshcc {
 	char *command;
 	char *args[LINE_BUFFER_MAX / 2];
 	int num_args;
-	void *next;
+	int fds[2];
+	struct _bshcc *next;
 	} bsh_command_chain_t;
 	
 	typedef struct {

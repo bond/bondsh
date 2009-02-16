@@ -20,12 +20,14 @@ void execute_binary(bsh_command_chain_t *chain, char *envp[], const char *path) 
 	pid_t pid;
 	pid = fork();
 	if(pid == 0) {
+		// chain->fds[0] = dup2(0, STDIN_FILENO);
+		// chain->fds[1] = dup2(0, STDOUT_FILENO);
 		i = execvP(chain->command, path, chain->args);
 		if(i < 0){
 			switch(errno) {
 				case ENOENT:
 					/* attach path */
-					errx(errno, "File does not exist: '%s'", chain->command);
+					errx(errno, "Could not find program: '%s' in PATH", chain->command);
 				default:
 					errx(errno, "Failed to execve(""%s"", argv, envp), errno is %d", chain->command, errno);
 			}
@@ -33,6 +35,7 @@ void execute_binary(bsh_command_chain_t *chain, char *envp[], const char *path) 
 			print_prompt();
 		}
 	} else if(pid > 0) {
+		//printf("filedes: %i\n", chain->fds[1]);
 		wait(NULL);
 	}	
 }
@@ -40,6 +43,7 @@ void execute_binary(bsh_command_chain_t *chain, char *envp[], const char *path) 
 void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 	for(;chain != NULL; chain = chain->next) {
 		execute_binary(chain, envp, path);
+		//printf("executing command: %s\n", chain->command);
 	}
 }
 
@@ -68,15 +72,23 @@ int main (int argc, char const *argv[], char *envp[])
 	for(;;) {
 		bzero(line, sizeof(line));
 		bsh_command_chain_t *chain = chain_init();
+		bsh_command_chain_t *next = chain;
 		
 		print_prompt();
 		
-		switch(determine_input_context(chain)) {
+MORE_INPUT:
+		switch(determine_input_context(next)) {
+			case CHAIN_WANT_PROCESS_PIPE:
+				chain->next = chain_init();
+				next = chain->next;
+				goto MORE_INPUT;
+				break;
+
 			case CONTEXT_EXECUTE:
 				execute_chain(chain, (char **)envp, path);
 				fflush(stdout);
-		
 				break;
+
 			case CONTEXT_NOCONTEXT:
 				printf("NOCONTEXT caught\n");
 				break;
