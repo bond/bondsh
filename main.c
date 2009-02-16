@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <assert.h>
 #include "bondsh.h"
 #include <errno.h>
 #include <editline/readline.h>
@@ -12,7 +13,7 @@ void sighandle_line_clear(int sig) {
 	fflush(stdout);
 }
 
-void execute_chain(const bsh_command_chain_t *chain, char *envp[]) {
+void execute_binary(const bsh_command_chain_t *chain, char *envp[]) {
 	int i;
 	pid_t pid;
 	pid = fork();
@@ -26,10 +27,14 @@ void execute_chain(const bsh_command_chain_t *chain, char *envp[]) {
 		}
 	} else if(pid > 0) {
 		wait(NULL);
-	}
+	}	
 }
 
-int main (int argc, char const *argv[], char const *envp[])
+void execute_chain(const bsh_command_chain_t *chain, char *envp[]) {
+	execute_binary(chain, envp);
+}
+
+int main (int argc, char const *argv[], char *envp[])
 {
 	setbuf(stdin, NULL);
 	/* define signal handlers */
@@ -48,6 +53,7 @@ int main (int argc, char const *argv[], char const *envp[])
 		/* PATH= */
 		if(*(envp[i]) == 80 && *(envp[i]+1) == 65 && *(envp[i]+2) == 84 && *(envp[i]+3) == 72 && *(envp[i]+4) == 61)
 			path = strdup(envp[i]+5);
+			assert(path);
 	}
 
 	for(;;) {
