@@ -20,7 +20,7 @@ int determine_input_context(bsh_command_chain_t *chain) {
 	/* Get input */	
 	for(i = 0; (c = getchar()) && (i - 1) < LINE_BUFFER_MAX;) {
 		if( feof(stdin) != 0 ) { exit(0); /* EOF */ }
-		
+
 		switch(chain_get_state(chain, (char *)&input_buf, c)) {
 			case CHAIN_WANT_COMMAND:
 				p = (char *)&(input_buf[i]);
@@ -49,6 +49,10 @@ int determine_input_context(bsh_command_chain_t *chain) {
 			case CHAIN_BUFFER_SKIP:
 				break;
 				
+			case CHAIN_WANT_COMPLETION:
+			printf("got tab!\n");
+				break;
+
 			default:
 				strncat(input_buf, (char *)&c, 1);
 				i++;

@@ -17,7 +17,9 @@ typedef void (*sighandler_t)(int);
 #define CHAIN_WANT_LAST_ARGUMENT	0x0007
 #define CHAIN_WANT_PROCESS_PIPE		0x0008
 #define	CHAIN_BUFFER_SKIP			0x0009
+#define CHAIN_WANT_COMPLETION		0x0010
 
+#define CHAR_TAB					 9
 #define CHAR_NEWLINE				10
 #define	CHAR_SPACE					32
 #define CHAR_PIPE					124

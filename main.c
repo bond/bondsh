@@ -5,21 +5,26 @@
 #include <signal.h>
 #include "bondsh.h"
 #include <errno.h>
+#include <editline/readline.h>
 
 
 void sighandle_line_clear(int sig) {
 	fflush(stdout);
 }
 
-void execute_binary(const char *command, char *argv[], char *envp[]) {
+void check_path(const bsh_command_chain_t *chain, const char *path) {
+	int i;
+	printf("%c", path+1);
+	for(i = 0; (int *)envp+i != NULL; i++) printf("%d - %c\n", i, *envp+i);
+}
+void execute_chain(const bsh_command_chain_t *chain, char *envp[]) {
 	int i;
 	pid_t pid;
-
 	pid = fork();
 	if(pid == 0) {
-		i = execve(command, argv, envp);	
+		i = execve(chain->command, chain->args, envp);	
 		if(i < 0){
-			printf("failed to execve(""%s"", argv, envp),errno is %d\n", command, errno);
+			printf("failed to execve(""%s"", argv, envp),errno is %d\n", chain->command, errno);
 			exit(0);
 		} else {
 			print_prompt();
@@ -31,6 +36,7 @@ void execute_binary(const char *command, char *argv[], char *envp[]) {
 
 int main (int argc, char const *argv[], char const *envp[])
 {
+	setbuf(stdin, NULL);
 	/* define signal handlers */
 	signal(SIGINT, SIG_IGN);
 	signal(SIGINT, sighandle_line_clear);
@@ -40,6 +46,15 @@ int main (int argc, char const *argv[], char const *envp[])
 	bsh_history_chain_t hist;
 	history_init(&hist);
 	
+	/* pick out important info from ENV */
+	int i = 0;
+	char *path = NULL;
+	for(i = 0; envp[i] != NULL; i++) {
+		/* PATH= */
+		if(*(envp[i]) == 80 && *(envp[i]+1) == 65 && *(envp[i]+2) == 84 && *(envp[i]+3) == 72 && *(envp[i]+4) == 61)
+			path = strdup(envp[i]+5);
+	}
+
 	for(;;) {
 		bzero(line, sizeof(line));
 		bsh_command_chain_t chain;
@@ -49,7 +64,8 @@ int main (int argc, char const *argv[], char const *envp[])
 		
 		switch(determine_input_context(&chain)) {
 			case CONTEXT_EXECUTE:
-				execute_binary(chain.command, (char **)&(chain.args), (char **)envp);
+				check_path(&chain, path);
+				execute_chain(&chain, (char **)envp);
 				fflush(stdout);
 
 				break;

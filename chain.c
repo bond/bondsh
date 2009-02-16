@@ -13,7 +13,6 @@ void chain_init(bsh_command_chain_t *cc) {
 	assert(cc->args[0] && cc->num_args);
 }
 void chain_free(bsh_command_chain_t *cc) {
-//	printf("freeing command: %s\n", cc->command);
 	int i;
 	if(cc->command != NULL) free(cc->command);
 	if(cc->next != NULL) free(cc->next);
@@ -42,6 +41,8 @@ int chain_get_state(bsh_command_chain_t *cc, char *buf, char c) {
 			if(strlen(buf) == 0) return CHAIN_BUFFER_SKIP;
 			if(cc->command == NULL) return CHAIN_WANT_COMMAND;
 			return CHAIN_WANT_ARGUMENT;
+		case CHAR_TAB:
+			return CHAIN_WANT_COMPLETION;
 		case CHAR_PIPE:
 			return CHAIN_WANT_PROCESS_PIPE;
 		default:
