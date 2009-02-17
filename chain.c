@@ -10,6 +10,7 @@ bsh_command_chain_t *chain_init() {
  	cc->command = NULL;	
 	bzero(cc->args, sizeof(cc->args));
 	cc->num_args = 0;
+	cc->op = 0;
 	cc->next = NULL;
  	cc->args[cc->num_args++] = strdup(PROGRAM_NAME);	
  	assert(cc->args[0] && cc->num_args);

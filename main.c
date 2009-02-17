@@ -35,8 +35,61 @@ void execute_binary(bsh_command_chain_t *chain, char *envp[], const char *path) 
 		}
 	} else if(pid > 0) {
 		//printf("filedes: %i\n", chain->fds[1]);
-		wait(NULL);
+		wait(&i);
+		printf("wait complete, status is %i\n", i);
 	}	
+}
+/* 1 - launch off forks
+*/
+void execute_chain2(bsh_command_chain_t *chain, char *envp[], const char *path) {
+	bsh_command_chain_t *cmd;
+	int i;
+	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
+		
+		if(cmd->next != NULL && cmd->next->op == PIPE_STDIN) {
+			pipe(cmd->next->fds);
+			close(chain->next->fds[1]);
+			close(chain->next->fds[0]);
+		}
+		cmd->pid = fork();
+		if(cmd->pid == 0) {
+			/* if next command wants stdin, let it know what stdout will be */
+			if(cmd->next != NULL && cmd->next->op == PIPE_STDIN) {
+			 	dup2(chain->next->fds[1], STDOUT_FILENO);
+				printf("told next cmd what our stdout is\n");
+			} 
+			/* we want to connect to last cmd's stdout */
+			if(cmd->op == PIPE_STDIN) {
+				dup2(chain->fds[0], STDIN_FILENO);
+			}
+			
+
+			i = execvP(cmd->command, path, cmd->args);
+			if(i < 0){
+				switch(errno) {
+					case ENOENT:
+						errx(errno, "Could not find program: '%s' in PATH", cmd->command);
+					default:
+						errx(errno, "Failed to execve(""%s"", argv, envp), errno is %d", cmd->command, errno);
+				}
+			} else {
+				errx(-1, "unhandled exception");
+			}
+		}
+	}
+	
+	/* loop through after processes are forked off, and waitpid and close fd's, etc */
+	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
+		if(cmd->pid > 0) {				
+			printf("[%d] waiting\n", cmd->pid);
+			if(cmd->op == PIPE_STDIN) {
+				close(cmd->fds[0]);
+			}
+			waitpid(cmd->pid, &i, 0);
+
+			printf("Finished wait\n");
+		}
+	}
 }
 
 void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
@@ -80,10 +133,12 @@ MORE_INPUT:
 			case CHAIN_WANT_PROCESS_PIPE:
 				current->next = chain_init();
 				current = current->next;
+				current->op = PIPE_STDIN;
 				goto MORE_INPUT;
 
 			case CONTEXT_EXECUTE:
-				execute_chain(chain, (char **)envp, path);
+			printf("executing chain!\n");
+				execute_chain2(chain, (char **)envp, path);
 				fflush(stdout);
 				break;
 

@@ -1,3 +1,5 @@
+#include <sys/types.h>
+
 #define LINE_BUFFER_MAX				4096
 #define HISTORY_MAX					1024
 #define PROGRAM_NAME				"bondsh"
@@ -19,6 +21,8 @@ typedef void (*sighandler_t)(int);
 #define	CHAIN_BUFFER_SKIP			0x0009
 #define CHAIN_WANT_COMPLETION		0x0010
 
+#define PIPE_STDIN					0x0100
+
 #define CHAR_TAB					 9
 #define CHAR_SLASH					 47
 #define CHAR_NEWLINE				10
@@ -32,7 +36,9 @@ typedef struct _bshcc {
 	char *command;
 	char *args[LINE_BUFFER_MAX / 2];
 	int num_args;
+	pid_t pid;
 	int fds[2];
+	int op;
 	struct _bshcc *next;
 	} bsh_command_chain_t;
 	
