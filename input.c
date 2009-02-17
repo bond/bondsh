@@ -40,9 +40,7 @@ int determine_input_context(bsh_command_chain_t *chain) {
 
 			case CHAIN_WANT_LAST_ARGUMENT:
 //				printf("want last argument '%s'\n", p);
-				if(strlen(p) > 0) {
 					chain_set_argument(chain, p);
-				}
 				goto CHAIN_END;
 				
 			case CHAIN_WANT_PROCESS_PIPE:

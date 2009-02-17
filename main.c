@@ -26,13 +26,12 @@ void execute_binary(bsh_command_chain_t *chain, char *envp[], const char *path) 
 		if(i < 0){
 			switch(errno) {
 				case ENOENT:
-					/* attach path */
 					errx(errno, "Could not find program: '%s' in PATH", chain->command);
 				default:
 					errx(errno, "Failed to execve(""%s"", argv, envp), errno is %d", chain->command, errno);
 			}
 		} else {
-			print_prompt();
+			errx(-1, "unhandled exception");
 		}
 	} else if(pid > 0) {
 		//printf("filedes: %i\n", chain->fds[1]);
@@ -72,17 +71,16 @@ int main (int argc, char const *argv[], char *envp[])
 	for(;;) {
 		bzero(line, sizeof(line));
 		bsh_command_chain_t *chain = chain_init();
-		bsh_command_chain_t *next = chain;
+		bsh_command_chain_t *current = chain;
 		
 		print_prompt();
 		
 MORE_INPUT:
-		switch(determine_input_context(next)) {
+		switch(determine_input_context(current)) {
 			case CHAIN_WANT_PROCESS_PIPE:
-				chain->next = chain_init();
-				next = chain->next;
+				current->next = chain_init();
+				current = current->next;
 				goto MORE_INPUT;
-				break;
 
 			case CONTEXT_EXECUTE:
 				execute_chain(chain, (char **)envp, path);

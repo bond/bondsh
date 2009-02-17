@@ -16,9 +16,10 @@ bsh_command_chain_t *chain_init() {
 	return cc;
 }
 void chain_free(bsh_command_chain_t *cc) {
-	int i;
-	if(cc->command != NULL) free(cc->command);
 	if(cc->next != NULL) free(cc->next);
+
+	if(cc->command != NULL) free(cc->command);
+	int i;
 	for(i = 0; cc->args[i] != NULL; i++) {
 		free(cc->args[i]);
 	}
@@ -29,10 +30,13 @@ void chain_set_command(bsh_command_chain_t *cc, char *command) {
 	assert(cc->command);
 	assert(cc->args[0]);
 }
+
 void chain_set_argument(bsh_command_chain_t *cc, char *argument) {
-	cc->args[cc->num_args] = strdup(argument);
-	assert(cc->args[cc->num_args]);
-	cc->num_args++;
+	if(strlen(argument) > 0) {
+		cc->args[cc->num_args] = strdup(argument);
+		assert(cc->args[cc->num_args]);
+		cc->num_args++;
+	}
 }
 int chain_get_state(bsh_command_chain_t *cc, char *buf, char c) {
 	switch(c) {
@@ -49,7 +53,8 @@ int chain_get_state(bsh_command_chain_t *cc, char *buf, char c) {
 		case CHAR_TAB:
 			return CHAIN_WANT_COMPLETION;
 		case CHAR_PIPE:
-			if(strlen(buf) == 0) { print_prompt(); return CHAIN_BUFFER_SKIP; }
+		    /* don't care.. */
+			if(strlen(buf) == 0) { return CHAIN_BUFFER_SKIP; }
 			return CHAIN_WANT_PROCESS_PIPE;
 		default:
 			return CONTEXT_NOCONTEXT;			
