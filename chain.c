@@ -17,13 +17,10 @@ bsh_command_chain_t *chain_init() {
 	return cc;
 }
 void chain_free(bsh_command_chain_t *cc) {
-	if(cc->next != NULL) free(cc->next);
-
-	if(cc->command != NULL) free(cc->command);
 	int i;
-	for(i = 0; cc->args[i] != NULL; i++) {
-		free(cc->args[i]);
-	}
+	if(cc->next != NULL) free(cc->next);
+	if(cc->command != NULL) free(cc->command);
+	for(i = 0; cc->args[i] != NULL; i++) free(cc->args[i]);
 }
 void chain_set_command(bsh_command_chain_t *cc, char *command) {
 	cc->command = strdup(command);

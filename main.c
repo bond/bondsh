@@ -15,54 +15,41 @@ void sighandle_line_clear(int sig) {
 	fflush(stdout);
 }
 
-void execute_binary(bsh_command_chain_t *chain, char *envp[], const char *path) {
-	int i;
-	pid_t pid;
-	pid = fork();
-	if(pid == 0) {
-		// chain->fds[0] = dup2(0, STDIN_FILENO);
-		// chain->fds[1] = dup2(0, STDOUT_FILENO);
-		i = execvP(chain->command, path, chain->args);
-		if(i < 0){
-			switch(errno) {
-				case ENOENT:
-					errx(errno, "Could not find program: '%s' in PATH", chain->command);
-				default:
-					errx(errno, "Failed to execve(""%s"", argv, envp), errno is %d", chain->command, errno);
-			}
-		} else {
-			errx(-1, "unhandled exception");
-		}
-	} else if(pid > 0) {
-		//printf("filedes: %i\n", chain->fds[1]);
-		wait(&i);
-		printf("wait complete, status is %i\n", i);
-	}	
-}
 /* 1 - launch off forks
 */
 void execute_chain2(bsh_command_chain_t *chain, char *envp[], const char *path) {
 	bsh_command_chain_t *cmd;
-	int i;
+	int i, pids_left;
 	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
-		
-		if(cmd->next != NULL && cmd->next->op == PIPE_STDIN) {
-			pipe(cmd->next->fds);
-			close(chain->next->fds[1]);
-			close(chain->next->fds[0]);
+		if(cmd->next  && cmd->next->op == PIPE_STDIN) {
+			// FIXME: check return value for pipe();
+			pipe(cmd->next->fds); // if there is a next cmd
+//			printf("created pipe, fds are: %d and %d\n", cmd->next->fds[0], cmd->next->fds[1]);
 		}
-		cmd->pid = fork();
-		if(cmd->pid == 0) {
-			/* if next command wants stdin, let it know what stdout will be */
-			if(cmd->next != NULL && cmd->next->op == PIPE_STDIN) {
-			 	dup2(chain->next->fds[1], STDOUT_FILENO);
-				printf("told next cmd what our stdout is\n");
-			} 
-			/* we want to connect to last cmd's stdout */
+		// FIXME: check return value for fork();
+			cmd->pid = fork();
+			if(cmd->pid == 0) {
+
+			/* there is a previous cmd */
 			if(cmd->op == PIPE_STDIN) {
-				dup2(chain->fds[0], STDIN_FILENO);
+			//	printf("READ STDIN: %s\n", cmd->args[0]);
+				dup2(cmd->fds[0], STDIN_FILENO); 
+        close(cmd->fds[0]);
+  			close(cmd->fds[1]);
 			}
-			
+
+			/* there is a next OPERATION */
+			if(cmd->next && cmd->next->op == PIPE_STDIN) {
+			//	printf("WRITE STDOUT: %s\n", cmd->args[0]);
+				close(cmd->next->fds[0]);
+			 	dup2(cmd->next->fds[1], STDOUT_FILENO);
+				close(cmd->next->fds[1]);
+			}
+
+
+			printf("executing: ");
+			for(i = 0; cmd->args[i]; i++) printf(" %s", cmd->args[i]);
+			printf("\n");
 
 			i = execvP(cmd->command, path, cmd->args);
 			if(i < 0){
@@ -70,32 +57,35 @@ void execute_chain2(bsh_command_chain_t *chain, char *envp[], const char *path) 
 					case ENOENT:
 						errx(errno, "Could not find program: '%s' in PATH", cmd->command);
 					default:
-						errx(errno, "Failed to execve(""%s"", argv, envp), errno is %d", cmd->command, errno);
+						errx(errno, "Failed to execvP(""%s"", argv, envp), errno is %d", cmd->command, errno);
 				}
-			} else {
-				errx(-1, "unhandled exception");
 			}
+			// this should not happen
+			errx(-1, "unhandled exception");
+		} else if(cmd->pid > 0 && cmd->op == PIPE_STDIN) { // parent proc has a previous
+			close(cmd->fds[0]);
+			close(cmd->fds[1]);
 		}
-	}
-	
-	/* loop through after processes are forked off, and waitpid and close fd's, etc */
+	}   
+WAIT:
+	i = 0;
+	pids_left = 0;
 	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
-		if(cmd->pid > 0) {				
-			printf("[%d] waiting\n", cmd->pid);
-			if(cmd->op == PIPE_STDIN) {
-				close(cmd->fds[0]);
-			}
-			waitpid(cmd->pid, &i, 0);
-
-			printf("Finished wait\n");
+		i++;
+		if(!cmd->pid) continue;
+		// TODO: check return value for waitpid
+		if( waitpid(cmd->pid, &i, WNOHANG) > 0) {   
+				cmd->pid = 0;
+				printf("%s exited with status %d\n", cmd->args[0], i);    
+		} else {
+			printf("waiting for: %s %s\n", cmd->args[0], cmd->args[1]);
+			pids_left++;
 		}
 	}
-}
-
-void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
-	for(;chain != NULL; chain = chain->next) {
-		execute_binary(chain, envp, path);
-		//printf("executing command: %s\n", chain->command);
+	if(pids_left) {
+		printf("%d pids waiting\n", pids_left);
+		sleep(1);
+		goto WAIT;
 	}
 }
 
@@ -116,9 +106,10 @@ int main (int argc, char const *argv[], char *envp[])
 	char *path = NULL;
 	for(i = 0; envp[i] != NULL; i++) {
 		/* PATH= */
-		if(*(envp[i]) == 80 && *(envp[i]+1) == 65 && *(envp[i]+2) == 84 && *(envp[i]+3) == 72 && *(envp[i]+4) == 61)
+		if(strncmp(envp[i], "PATH=", 5) == 0) {
 			path = strdup(envp[i]+5);
 			assert(path);
+		}
 	}
 
 	for(;;) {

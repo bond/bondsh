@@ -1,6 +1,6 @@
 #include <sys/types.h>
 
-#define LINE_BUFFER_MAX				4096
+#define LINE_BUFFER_MAX			4096
 #define HISTORY_MAX					1024
 #define PROGRAM_NAME				"bondsh"
 
