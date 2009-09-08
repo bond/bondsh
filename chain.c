@@ -18,8 +18,8 @@ bsh_command_chain_t *chain_init() {
 }
 void chain_free(bsh_command_chain_t *cc) {
 	int i;
-	if(cc->next != NULL) free(cc->next);
-	if(cc->command != NULL) free(cc->command);
+	if(cc->next) free(cc->next);
+	if(cc->command) free(cc->command);
 	for(i = 0; cc->args[i] != NULL; i++) free(cc->args[i]);
 }
 void chain_set_command(bsh_command_chain_t *cc, char *command) {

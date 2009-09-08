@@ -17,20 +17,22 @@ void sighandle_line_clear(int sig) {
 
 /* 1 - launch off forks
 */
-void execute_chain2(bsh_command_chain_t *chain, char *envp[], const char *path) {
+void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 	bsh_command_chain_t *cmd;
 	int i, pids_left;
 	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
 		if(cmd->next  && cmd->next->op == PIPE_STDIN) {
-			// FIXME: check return value for pipe();
-			pipe(cmd->next->fds); // if there is a next cmd
+			/* The next entry in the chain, wants something into it's input.
+				 Create the pipe in the next object, so this entry can access it via 'next'.
+			*/
+			if (pipe(cmd->next->fds) == -1) errx(errno, "Unable to create pipe(%d,%d): %s", cmd->next->fds[0], cmd->next->fds[1], strerror(errno)); // if there is a next cmd
 //			printf("created pipe, fds are: %d and %d\n", cmd->next->fds[0], cmd->next->fds[1]);
 		}
-		// FIXME: check return value for fork();
-			cmd->pid = fork();
-			if(cmd->pid == 0) {
+		if((cmd->pid = fork()) == -1) errx(errno, "Unable to fork()!");
 
-			/* there is a previous cmd */
+		if(cmd->pid == 0) {
+
+			/* there is something connected to pipe fds[1] */
 			if(cmd->op == PIPE_STDIN) {
 			//	printf("READ STDIN: %s\n", cmd->args[0]);
 				dup2(cmd->fds[0], STDIN_FILENO); 
@@ -38,7 +40,7 @@ void execute_chain2(bsh_command_chain_t *chain, char *envp[], const char *path) 
   			close(cmd->fds[1]);
 			}
 
-			/* there is a next OPERATION */
+			/* connect something to next->pipe->fds[1] */
 			if(cmd->next && cmd->next->op == PIPE_STDIN) {
 			//	printf("WRITE STDOUT: %s\n", cmd->args[0]);
 				close(cmd->next->fds[0]);
@@ -51,6 +53,7 @@ void execute_chain2(bsh_command_chain_t *chain, char *envp[], const char *path) 
 			for(i = 0; cmd->args[i]; i++) printf(" %s", cmd->args[i]);
 			printf("\n");
 
+			/* run the program, and print a friendly message if program not in path */
 			i = execvP(cmd->command, path, cmd->args);
 			if(i < 0){
 				switch(errno) {
@@ -66,26 +69,31 @@ void execute_chain2(bsh_command_chain_t *chain, char *envp[], const char *path) 
 			close(cmd->fds[0]);
 			close(cmd->fds[1]);
 		}
-	}   
-WAIT:
-	i = 0;
-	pids_left = 0;
-	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
-		i++;
-		if(!cmd->pid) continue;
-		// TODO: check return value for waitpid
-		if( waitpid(cmd->pid, &i, WNOHANG) > 0) {   
-				cmd->pid = 0;
-				printf("%s exited with status %d\n", cmd->args[0], i);    
-		} else {
-			printf("waiting for: %s %s\n", cmd->args[0], cmd->args[1]);
-			pids_left++;
-		}
 	}
-	if(pids_left) {
-		printf("%d pids waiting\n", pids_left);
-		sleep(1);
-		goto WAIT;
+// WAIT:
+// 	i = 0;
+// 	pids_left = 0;
+// 	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
+// 		i++;
+// 		if(!cmd->pid) continue;
+// 		// TODO: check return value for waitpid
+// 		if( waitpid(cmd->pid, &i, WNOHANG) > 0) {   
+// 				cmd->pid = 0;
+// //				printf("%s exited with status %d\n", cmd->args[0], i);    
+// 		} else {
+// //			printf("waiting for: %s %s\n", cmd->args[0], cmd->args[1]);
+// 			pids_left++;
+// 		}
+// 	}
+// 	if(pids_left) {
+// //		printf("%d pids waiting\n", pids_left);
+// 		usleep(10000);
+// 		goto WAIT;
+// 	}
+	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
+		/* To start off with, we just simplify the WAIT-code, and see
+		if it's really needed */
+		waitpid(cmd->pid, &i, 0);
 	}
 }
 
@@ -98,6 +106,7 @@ int main (int argc, char const *argv[], char *envp[])
 	
 	/* code */
 	char line[LINE_BUFFER_MAX];
+	bsh_command_chain_t *chain, *current;
 	bsh_history_chain_t hist;
 	history_init(&hist);
 	
@@ -114,8 +123,8 @@ int main (int argc, char const *argv[], char *envp[])
 
 	for(;;) {
 		bzero(line, sizeof(line));
-		bsh_command_chain_t *chain = chain_init();
-		bsh_command_chain_t *current = chain;
+		chain = chain_init();
+		current = chain;
 		
 		print_prompt();
 		
@@ -129,7 +138,7 @@ MORE_INPUT:
 
 			case CONTEXT_EXECUTE:
 			printf("executing chain!\n");
-				execute_chain2(chain, (char **)envp, path);
+				execute_chain(chain, (char **)envp, path);
 				fflush(stdout);
 				break;
 
@@ -143,6 +152,7 @@ MORE_INPUT:
 				break;
 		}
 		chain_free(chain);
+		free(chain);
 		// history_attach(&hist, &chain);
 	}
 	
