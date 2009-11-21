@@ -69,30 +69,13 @@ void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 			close(cmd->fds[1]);
 		}
 	}
-// WAIT:
-// 	i = 0;
-// 	pids_left = 0;
-// 	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
-// 		i++;
-// 		if(!cmd->pid) continue;
-// 		// TODO: check return value for waitpid
-// 		if( waitpid(cmd->pid, &i, WNOHANG) > 0) {   
-// 				cmd->pid = 0;
-// //				printf("%s exited with status %d\n", cmd->args[0], i);    
-// 		} else {
-// //			printf("waiting for: %s %s\n", cmd->args[0], cmd->args[1]);
-// 			pids_left++;
-// 		}
-// 	}
-// 	if(pids_left) {
-// //		printf("%d pids waiting\n", pids_left);
-// 		usleep(10000);
-// 		goto WAIT;
-// 	}
 	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
 		/* To start off with, we just simplify the WAIT-code, and see
 		if it's really needed */
 		waitpid(cmd->pid, &i, 0);
+		// if(i != 0) {
+		// 	printf("ups, %s[%d] exited with status %d\n", cmd->command, cmd->pid, i);
+		// }
 	}
 }
 
