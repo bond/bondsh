@@ -49,13 +49,12 @@ void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 			}
 
 
-			printf("executing: ");
-			for(i = 0; cmd->args[i]; i++) printf(" %s", cmd->args[i]);
-			printf("\n");
+			//printf("executing: ");
+			//for(i = 0; cmd->args[i]; i++) printf(" %s", cmd->args[i]);
+			//printf("\n");
 
 			/* run the program, and print a friendly message if program not in path */
-			i = execvP(cmd->command, path, cmd->args);
-			if(i < 0){
+			if(execvP(cmd->command, path, cmd->args) < 0){
 				switch(errno) {
 					case ENOENT:
 						errx(errno, "Could not find program: '%s' in PATH", cmd->command);
@@ -113,9 +112,11 @@ int main (int argc, char const *argv[], char *envp[])
 	/* pick out important info from ENV */
 	int i = 0;
 	char *path = NULL;
+	char *p = NULL;
 	for(i = 0; envp[i] != NULL; i++) {
 		/* PATH= */
-		if(strncmp(envp[i], "PATH=", 5) == 0) {
+		if((p = strchr(envp[i], '=')) == NULL) continue;
+		if(strlen(envp[i]) > 5 && strncmp(envp[i], "PATH=", 5) == 0) {
 			path = strdup(envp[i]+5);
 			assert(path);
 		}
@@ -137,7 +138,7 @@ MORE_INPUT:
 				goto MORE_INPUT;
 
 			case CONTEXT_EXECUTE:
-			printf("executing chain!\n");
+				//printf("executing chain!\n");
 				execute_chain(chain, (char **)envp, path);
 				fflush(stdout);
 				break;
