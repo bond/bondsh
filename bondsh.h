@@ -1,5 +1,6 @@
 #include <sys/types.h>
 
+
 #define LINE_BUFFER_MAX			4096
 #define HISTORY_MAX					1024
 #define PROGRAM_NAME				"bondsh"
@@ -21,8 +22,12 @@ typedef void (*sighandler_t)(int);
 #define CHAIN_BUFFER_SKIP				0x0032
 #define CHAIN_WANT_COMPLETION				0x0064
 #define CHAIN_WANT_FILE_REDIRECTION	0x0128
+#define CHAIN_DONE									0x0256
 
 #define PIPE_STDIN					0x0100
+
+#define CHAR_LT						60
+#define CHAR_GT						62
 
 #define CHAR_TAB					9
 #define CHAR_SLASH					47
@@ -48,15 +53,16 @@ typedef struct _bshcc {
 		void *next;
 	} bsh_history_chain_t;
 	
-	int chain_get_state(bsh_command_chain_t*, char*, char);
 	void chain_set_argument(bsh_command_chain_t*, char*);
 	void chain_set_command(bsh_command_chain_t*, char*);
+	int parser_read(bsh_command_chain_t*, char**);
 	int determine_input_context(bsh_command_chain_t*);
+	bsh_command_chain_t *build_chain_from_str(char *line);
 	bsh_command_chain_t *chain_init();
 	void chain_free(bsh_command_chain_t*);
+	void chain_print(bsh_command_chain_t*);
 	void print_prompt();
 	
 	// #history
 	void history_init(bsh_history_chain_t*);
 	void history_attach(bsh_history_chain_t*, bsh_command_chain_t*);
-	

@@ -7,74 +7,85 @@
 #include <errno.h>
 #include <assert.h>
 
+bsh_command_chain_t *build_chain_from_str(char *line) {
+	bsh_command_chain_t *chain = chain_init();
+	bsh_command_chain_t *current = chain;
+	bsh_command_chain_t *b = current;
+	char *linep = line;
 
-int determine_input_context(bsh_command_chain_t *chain) {
-
-	int c,i; // c=char,i=index of char
-	char *p = NULL;
-//	int pipes = 0; //number of pipes in this line
+MORE_INPUT:
 	
-	char input_buf[LINE_BUFFER_MAX];
-	bzero(&input_buf, sizeof(input_buf));
-	
-	/* Get input */	
-	for(i = 0; (c = getchar()) && (i - 1) < LINE_BUFFER_MAX;) {
-		if( feof(stdin) != 0 ) { exit(0); /* EOF */ }
+	switch(parser_read(current, &line)) {
+		case CHAIN_WANT_PROCESS_PIPE:
+			//printf("CHAIN_WANT_PROCESS_PIPE:\n");
+			current->next = chain_init();
+			current = current->next;
+			current->op = PIPE_STDIN;
+			goto MORE_INPUT;
+			break;
 
-		switch(chain_get_state(chain, (char *)&input_buf, c)) {
-			case CHAIN_WANT_COMMAND:
-//				printf("want command '%s'\n", input_buf);
-				p = (char *)&(input_buf[i]);
-				chain_set_command(chain, (char *)&input_buf);
-				break;
-			case CHAIN_WANT_ARGUMENT:
-//				printf("want argument '%s'\n", p);
-				chain_set_argument(chain, p);
-				p = (char *)&(input_buf[i]);				
-				break;
-				
-			case CHAIN_WANT_LAST_COMMAND:
-//				printf("want last command\n");
-				chain_set_command(chain, (char *)&input_buf);
-				goto CHAIN_END;
+		case CHAIN_DONE:
+			//printf("CHAIN_DONE:\n");
+			return chain;
 
-			case CHAIN_WANT_LAST_ARGUMENT:
-//				printf("want last argument '%s'\n", p);
-					chain_set_argument(chain, p);
-				goto CHAIN_END;
-				
-			case CHAIN_WANT_PROCESS_PIPE:
-				if(chain->command == NULL) { chain_set_command(chain, (char *)&input_buf); }
-				else { chain_set_argument(chain, p); }
+		case CONTEXT_NOCONTEXT:
+			/* cleanup elements which have been given invalid arguments, like pipes without args */
+			for(current = chain; current != NULL; current = current->next) {
+				if(current->command == NULL)
+					if(current == chain) return NULL;
+					else{
+						chain_free(current);
+						free(current);
+						b->next = NULL;
+					}
 
-				return CHAIN_WANT_PROCESS_PIPE;
-				break;
-				
-			case CHAIN_BUFFER_SKIP:
-				break;
-				
-			case CHAIN_WANT_COMPLETION:
-			printf("got tab!\n");
-				break;
+				b = current;
+			}
+			return chain;
 
-			default:
-				strncat(input_buf, (char *)&c, 1);
-				i++;
-				break;
-		}
-		// if(c == 32) {
-		// 	chain_set_command(&cc, input_buf);
-		// }
-		// if(c == 124) pipe_seen++;
-		// 
-		// strncat(input_buf, (char *)&c, 1);
+		default:
+			errx(-1, "error!");
+
 	}
-	return CONTEXT_NOCONTEXT;
-	
-CHAIN_END:
-	/* Determine stuff */
-//	printf("\n");
-	
-	/* set context data and return */
-	return CONTEXT_EXECUTE;
+
+	return chain;
+}
+
+int parser_read(bsh_command_chain_t *chain, char **line) {
+	char buf[LINE_BUFFER_MAX];
+	char *p = *line;
+	int i;
+
+	bzero(&buf, sizeof(buf));
+
+	for(i=0;(p=(*line)+i)[0] != '\0'; i++) {
+		switch(p[0]) {
+			case CHAR_SPACE:
+				if(strlen(buf) > 0) {
+					if(chain->command == NULL) chain_set_command(chain, (char *)&buf);
+					else { chain_set_argument(chain, (char *)&buf); }
+					bzero(buf, sizeof(buf));
+				}
+			break;
+			case CHAR_PIPE:
+			if(chain->command != NULL) {
+				*line = ++p; // adjust line, to the current parser location
+				return CHAIN_WANT_PROCESS_PIPE;
+			} else if(strlen(buf) > 0) {
+					*line = ++p; // adjust line ..
+					chain_set_command(chain, (char *)&buf);
+					return CHAIN_WANT_PROCESS_PIPE;
+			}
+			break;
+			default:
+			strncat(buf, p, 1);
+		}
+	}
+
+	if(strlen(buf) > 0)
+		if(chain->command == NULL) chain_set_command(chain, (char *)&buf);
+		else chain_set_argument(chain, (char *)&buf);
+
+			if(strlen(buf) == 0) return CONTEXT_NOCONTEXT;
+	return CHAIN_DONE;
 }

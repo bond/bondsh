@@ -18,7 +18,7 @@ bsh_command_chain_t *chain_init() {
 }
 void chain_free(bsh_command_chain_t *cc) {
 	int i;
-	if(cc->next) free(cc->next);
+	if(cc->next) { chain_free(cc->next); free(cc->next); }
 	if(cc->command) free(cc->command);
 	for(i = 0; cc->args[i] != NULL; i++) free(cc->args[i]);
 }
@@ -36,28 +36,14 @@ void chain_set_argument(bsh_command_chain_t *cc, char *argument) {
 		cc->num_args++;
 	}
 }
-int chain_get_state(bsh_command_chain_t *cc, char *buf, char c) {
-	switch(c) {
-		case CHAR_NEWLINE:
-			/* we don't care about preceding newlines */
-			if(strlen(buf) == 0) { print_prompt(); return CHAIN_BUFFER_SKIP;}
-			if(cc->command == NULL) return CHAIN_WANT_LAST_COMMAND;
-			return CHAIN_WANT_LAST_ARGUMENT;
-		case CHAR_SPACE:
-			/* we don't care about preceding spaces */
-			if(strlen(buf) == 0) return CHAIN_BUFFER_SKIP;
-			if(cc->command == NULL) return CHAIN_WANT_COMMAND;
-			return CHAIN_WANT_ARGUMENT;
-		case CHAR_TAB:
-			return CHAIN_WANT_COMPLETION;
-		case CHAR_PIPE:
-		    /* don't care.. */
-			if(strlen(buf) == 0) { return CHAIN_BUFFER_SKIP; }
-			return CHAIN_WANT_PROCESS_PIPE;
-		default:
-			return CONTEXT_NOCONTEXT;			
-	}
 
-	/* default, just adds characters to the line_buf */
-	return CONTEXT_NOCONTEXT;
+void chain_print(bsh_command_chain_t *cc) {
+	static int x = 0;
+	int i;
+	printf("chain: %d\n", x);
+	printf("chain->command: '%s'\n", cc->command);
+	printf("chain->args:\n");
+	for(i = 0; cc->args[i] != NULL; i++) printf("\t[%d]: '%s'\n", i, cc->args[i]);
+	printf("\n");
+	if(cc->next) {x++; chain_print(cc->next); x--;}
 }

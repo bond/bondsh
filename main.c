@@ -8,14 +8,12 @@
 #include <errno.h>
 #include <limits.h>
 #include <err.h>
-#include <editline/readline.h>
+#include <readline/readline.h>
 
 
-void sighandle_line_clear(int sig) {
-	fflush(stdout);
-}
+static char *line_read = (char *)NULL;
 
-/* 1 - launch off forks
+/* launch off forks
 */
 void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 	bsh_command_chain_t *cmd;
@@ -48,16 +46,12 @@ void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 				close(cmd->next->fds[1]);
 			}
 
-
-			//printf("executing: ");
-			//for(i = 0; cmd->args[i]; i++) printf(" %s", cmd->args[i]);
-			//printf("\n");
-
 			/* run the program, and print a friendly message if program not in path */
 			if(execvP(cmd->command, path, cmd->args) < 0){
 				switch(errno) {
 					case ENOENT:
 						errx(errno, "Could not find program: '%s' in PATH", cmd->command);
+
 					default:
 						errx(errno, "Failed to execvP(""%s"", argv, envp), errno is %d", cmd->command, errno);
 				}
@@ -79,18 +73,28 @@ void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 	}
 }
 
+char *rl_gets()
+{
+	if(line_read) {
+		free(line_read);
+		line_read = (char *)NULL;
+	}
+	/* grab the line */
+	line_read = readline("db@macbookpro> ");
+	
+	/* add to history if it contains anything */
+	if(line_read && *line_read) 
+			add_history(line_read);
+			
+	return line_read;
+}
+
 int main (int argc, char const *argv[], char *envp[])
 {
-	setbuf(stdin, NULL);
-	/* define signal handlers */
-	signal(SIGINT, SIG_IGN);
-	signal(SIGINT, sighandle_line_clear);
 	
 	/* code */
 	char line[LINE_BUFFER_MAX];
 	bsh_command_chain_t *chain, *current;
-	bsh_history_chain_t hist;
-	history_init(&hist);
 	
 	/* pick out important info from ENV */
 	int i = 0;
@@ -106,39 +110,20 @@ int main (int argc, char const *argv[], char *envp[])
 	}
 
 	for(;;) {
-		bzero(line, sizeof(line));
-		chain = chain_init();
-		current = chain;
+		/* MAIN LOOP */
+		rl_gets();
+		if(line_read == NULL) return;
+		//printf("got new line from readline: %s\n", line_read);
+		chain = build_chain_from_str(line_read);
+		if(chain == NULL) continue;
+    //chain_print(chain);
+		//return 0;
 		
-		print_prompt();
-		
-MORE_INPUT:
-		switch(determine_input_context(current)) {
-			case CHAIN_WANT_PROCESS_PIPE:
-				current->next = chain_init();
-				current = current->next;
-				current->op = PIPE_STDIN;
-				goto MORE_INPUT;
+		execute_chain(chain, (char **)envp, path);
 
-			case CONTEXT_EXECUTE:
-				//printf("executing chain!\n");
-				execute_chain(chain, (char **)envp, path);
-				fflush(stdout);
-				break;
-
-			case CONTEXT_NOCONTEXT:
-				printf("NOCONTEXT caught\n");
-				break;
-				
-			default:
-				printf("error!\n");
-				exit(-1);
-				break;
-		}
 		chain_free(chain);
 		free(chain);
-		// history_attach(&hist, &chain);
-	}
+ 	}  
 	
 	return 0;
 }
