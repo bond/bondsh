@@ -1,14 +1,12 @@
-CC = gcc
 CFLAGS = -g -Werror
-LDFLAGS =
+LDFLAGS = -lncurses -lreadline
 
-FILES = *.c
-# cc -Wall -o bondsh *.c
+INPUT_FILES = *.c
 
 all: bondsh
 
-bondsh: $(FILES)
-	cc $(CFLAGS) -o $@ $^
+bondsh: $(INPUT_FILES)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
 	$(RM) bondsh
