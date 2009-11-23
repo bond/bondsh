@@ -12,12 +12,12 @@
 
 
 static char *line_read = (char *)NULL;
-
+static char *std_prompt = "%u %B%~%b> ";
 /* launch off forks
 */
 void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 	bsh_command_chain_t *cmd;
-	int i, pids_left;
+	int i;
 	for(cmd = chain;cmd != NULL; cmd = cmd->next) {
 		if(cmd->next  && cmd->next->op == PIPE_STDIN) {
 			/* The next entry in the chain, wants something into it's input.
@@ -75,29 +75,30 @@ void execute_chain(bsh_command_chain_t *chain, char *envp[], const char *path) {
 
 char *rl_gets()
 {
+	char *prompt = NULL;
 	if(line_read) {
 		free(line_read);
 		line_read = (char *)NULL;
 	}
-	/* grab the line */
-	line_read = readline("db@macbookpro> ");
-	
+	/* add path and grab the line */
+	prompt = prompt_expand(std_prompt);
+	line_read = readline(prompt);
+
 	/* add to history if it contains anything */
 	if(line_read && *line_read) 
 			add_history(line_read);
-			
+
 	return line_read;
 }
 
 int main (int argc, char const *argv[], char *envp[])
 {
-	
-	/* code */
 	char line[LINE_BUFFER_MAX];
 	bsh_command_chain_t *chain, *current;
 	
 	/* pick out important info from ENV */
 	int i = 0;
+
 	char *path = NULL;
 	char *p = NULL;
 	for(i = 0; envp[i] != NULL; i++) {
@@ -118,7 +119,7 @@ int main (int argc, char const *argv[], char *envp[])
 		if(chain == NULL) continue;
     //chain_print(chain);
 		//return 0;
-		
+
 		execute_chain(chain, (char **)envp, path);
 
 		chain_free(chain);

@@ -34,6 +34,7 @@ typedef void (*sighandler_t)(int);
 #define CHAR_NEWLINE				        10
 #define CHAR_SPACE					32
 #define CHAR_PIPE					124
+#define	CHAR_PERCENT			37
 
 // COMMAND-CHAIN DATATYPES
 
@@ -61,7 +62,7 @@ typedef struct _bshcc {
 	bsh_command_chain_t *chain_init();
 	void chain_free(bsh_command_chain_t*);
 	void chain_print(bsh_command_chain_t*);
-	void print_prompt();
+	char *prompt_expand(char *fmt);
 	
 	// #history
 	void history_init(bsh_history_chain_t*);
